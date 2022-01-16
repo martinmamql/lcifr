@@ -9,6 +9,9 @@ from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+from attacks import PGD
+from constraints import ConstraintBuilder
+from dl2.training.supervised.oracles import DL2_Oracle
 from experiments.args_factory import get_args
 from metrics import equalized_odds, statistical_parity
 from models import Autoencoder, LogisticRegression
@@ -60,6 +63,14 @@ autoencoder.load_state_dict(
     )
 )
 
+oracle = DL2_Oracle(
+    learning_rate=args.dl2_lr, net=autoencoder,
+    use_cuda=torch.cuda.is_available(),
+    constraint=ConstraintBuilder.build(
+        autoencoder, train_dataset, args.constraint
+    )
+)
+
 binary_cross_entropy = nn.BCEWithLogitsLoss(
     pos_weight=train_dataset.pos_weight('train') if args.balanced else None
 )
@@ -78,16 +89,36 @@ def run(autoencoder, classifier, optimizer, loader, split):
 
     progress_bar = tqdm(loader)
 
+    if args.adversarial:
+        attack = PGD(
+            classifier, args.delta, F.binary_cross_entropy_with_logits,
+            clip_min=float('-inf'), clip_max=float('inf')
+        )
+
     for data_batch, targets_batch, protected_batch in progress_bar:
         batch_size = data_batch.shape[0]
         data_batch = data_batch.to(device)
         targets_batch = targets_batch.to(device)
         protected_batch = protected_batch.to(device)
 
+        x_batches, y_batches = list(), list()
+        assert batch_size % oracle.constraint.n_tvars == 0
+        k = batch_size // oracle.constraint.n_tvars
+
+        for i in range(oracle.constraint.n_tvars):
+            x_batches.append(data_batch[i: i + k])
+            y_batches.append(targets_batch[i: i + k])
+
         if split == 'train':
             classifier.train()
 
         latent_data = autoencoder.encode(data_batch)
+
+        if args.adversarial:
+            latent_data = attack.attack(
+                args.delta / 10, latent_data, 20, targets_batch,
+                targeted=False, num_restarts=1, random_start=True
+            )
 
         logits = classifier(latent_data)
         ce_loss = binary_cross_entropy(logits, targets_batch)
