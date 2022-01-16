@@ -15,6 +15,9 @@ from metrics import equalized_odds, statistical_parity
 from models import Autoencoder, LogisticRegression
 from utils import Statistics
 
+from datasets import ConditionalBatchSampler # Conditional contrastive learning sampler
+
+
 args = get_args()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -41,9 +44,18 @@ dataset = getattr(
 )
 train_dataset = dataset('train', args)
 val_dataset = dataset('validation', args)
-train_loader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=args.batch_size, shuffle=True
-)
+
+# A custom batch sampler for conditional contrastive learning
+if args.conditional_training:
+    conditional_sampler = ConditionalBatchSampler(
+        train_dataset, args.batch_size, train_dataset.protected_train)
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True,
+        batch_sampler=conditional_sampler)
+else:
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True)
+
 val_loader = torch.utils.data.DataLoader(
     val_dataset, batch_size=args.batch_size, shuffle=False
 )
@@ -70,6 +82,7 @@ def run(autoencoder, optimizer, loader, split, epoch):
         targets_batch = targets_batch.to(device)
         protected_batch = protected_batch.to(device)
 
+        # A data batch with noise, to create positive and negative pairs
         data_batch_with_noise = data_batch + torch.normal(mean=torch.zeros(data_batch.shape), std=torch.ones(data_batch.shape)).to(device)
 
         if split == 'train':
@@ -78,6 +91,8 @@ def run(autoencoder, optimizer, loader, split, epoch):
         latent_data = autoencoder.encode(data_batch) #bs, h_dim
         latent_data_with_noise = autoencoder.encode(data_batch_with_noise) #bs, h_dim
         
+        # Positive pair: a sample and its variant with added noise
+        # Negative pairs: a sample with all other noise-added variants except its own variant
         score = torch.matmul(latent_data, latent_data_with_noise.T)
         contrastive_loss = cross_entropy(score, torch.arange(batch_size).to(device)) 
 

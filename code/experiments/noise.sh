@@ -24,6 +24,7 @@ python train_encoder.py --dataset ${dataset} --load \
   --encoder-layers ${encoder_layers} \
   --decoder-layers ${decoder_layers} \
   --constraint "GeneralCategorical(0.01, 0.3, [])" \
+  --conditional_training true
 
 # LCIFR data consumer
 python train_classifier.py --dataset ${dataset} --load \
