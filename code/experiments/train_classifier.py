@@ -16,6 +16,7 @@ from utils import Statistics
 
 args = get_args()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+assert args.conditional_training==False # Should not enable conditional training here
 
 project_root = path.dirname(path.dirname(path.dirname(path.abspath(__file__))))
 base_dir = path.join(

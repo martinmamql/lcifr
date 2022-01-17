@@ -5,3 +5,4 @@ from datasets.crime import CrimeDataset
 from datasets.german import GermanDataset
 from datasets.health import HealthDataset
 from datasets.lawschool import LawschoolDataset
+from datasets.conditional_sampler import ConditionalBatchSampler

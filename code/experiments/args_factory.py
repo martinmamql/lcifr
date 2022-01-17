@@ -30,6 +30,9 @@ def get_args():
     parser.add_argument('--protected-att', type=str, default=None)
     parser.add_argument('--adversarial', action='store_true')
     parser.add_argument('--delta', type=float, default=None)
+    parser.add_argument('--conditional-training', action='store_true')
+    parser.add_argument('--contrastive_noise', type=float, default=1e-5, \
+                         help="noise level to create positive pair")
 
     args = parser.parse_args()
 

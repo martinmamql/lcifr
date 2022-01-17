@@ -50,11 +50,13 @@ if args.conditional_training:
     conditional_sampler = ConditionalBatchSampler(
         train_dataset, args.batch_size, train_dataset.protected_train)
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True,
+        train_dataset,
         batch_sampler=conditional_sampler)
+    print("Conditional contrastive learning enabled")
 else:
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True)
+    print("Conditional contrastive learning disabled")
 
 val_loader = torch.utils.data.DataLoader(
     val_dataset, batch_size=args.batch_size, shuffle=False
@@ -83,7 +85,8 @@ def run(autoencoder, optimizer, loader, split, epoch):
         protected_batch = protected_batch.to(device)
 
         # A data batch with noise, to create positive and negative pairs
-        data_batch_with_noise = data_batch + torch.normal(mean=torch.zeros(data_batch.shape), std=torch.ones(data_batch.shape)).to(device)
+        data_batch_with_noise = data_batch + \
+          torch.normal(mean=torch.zeros(data_batch.shape), std=torch.ones(data_batch.shape)*args.contrastive_noise).to(device)
 
         if split == 'train':
             autoencoder.train()

@@ -7,24 +7,43 @@ german=(german 10.0 "59 20 20" "20 20 59" 59_20_20_20_59)
 health=(health 1.0 "110 20 20" "20 20 110" 110_20_20_20_110)
 lawschool=(lawschool 0.1 "37 20" "20 37" 37_20_37)
 
-dataset="adult"
-encoder_layers="104 20 20"
-decoder_layers="20 20 104"
-layers=104_20_20_20_104
+#dataset="adult"
+#encoder_layers="104 20 20"
+#decoder_layers="20 20 104"
+#layers=104_20_20_20_104
 
-# baseline
-#python train_encoder.py --dataset ${dataset} --load \
-#  --encoder-layers ${encoder_layers} \
-#  --decoder-layers ${decoder_layers} \
-#  --constraint "GeneralCategorical(0.01, 0.3, [])" \
-#  --dl2-weight 0
+#dataset="german"
+#encoder_layers="59 20 20"
+#decoder_layers="20 20 59"
+#layers=59_20_20_20_59
+
+#dataset="compas"
+#encoder_layers="14 20 20"
+#decoder_layers="20 20 14"
+#layers=14_20_20_20_14
+
+#dataset="crime"
+#encoder_layers="147 20 20"
+#decoder_layers="20 20 147"
+#layers=147_20_20_20_147
+
+#dataset="health"
+#encoder_layers="110 20 20"
+#decoder_layers="20 20 110"
+#layers=110_20_20_20_110
+
+dataset="lawschool"
+encoder_layers="37 20"
+decoder_layers="20 27"
+layers=37_20_37
 
 # LCIFR data producer
 python train_encoder.py --dataset ${dataset} --load \
   --encoder-layers ${encoder_layers} \
   --decoder-layers ${decoder_layers} \
   --constraint "GeneralCategorical(0.01, 0.3, [])" \
-  --conditional_training true
+  --contrastive_noise 1e-5 \
+  --conditional-training
 
 # LCIFR data consumer
 python train_classifier.py --dataset ${dataset} --load \
